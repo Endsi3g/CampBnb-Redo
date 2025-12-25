@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CampBnB</string>
+    <string name="title_activity_main">CampBnB</string>
+    <string name="package_name">com.campbnb.app</string>
+    <string name="custom_url_scheme">com.campbnb.app</string>
+</resources>
