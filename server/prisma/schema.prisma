@@ -35,7 +35,7 @@ model Listing {
   title       String
   description String
   type        ListingType
-  price       Float
+  price       Decimal     @db.Decimal(10, 2)
   currency    String      @default("CAD")
   location    String
   latitude    Float
@@ -75,11 +75,11 @@ model Booking {
   children    Int           @default(0)
   infants     Int           @default(0)
   pets        Int           @default(0)
-  nightlyRate Float
-  cleaningFee Float         @default(0)
-  serviceFee  Float         @default(0)
-  taxes       Float         @default(0)
-  totalPrice  Float
+  nightlyRate Decimal       @db.Decimal(10, 2)
+  cleaningFee Decimal       @default(0) @db.Decimal(10, 2)
+  serviceFee  Decimal       @default(0) @db.Decimal(10, 2)
+  taxes       Decimal       @default(0) @db.Decimal(10, 2)
+  totalPrice  Decimal       @db.Decimal(10, 2)
   status      BookingStatus @default(PENDING)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -87,7 +87,7 @@ model Booking {
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   listingId   String
-  listing     Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing     Listing       @relation(fields: [listingId], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([listingId])

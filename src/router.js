@@ -103,8 +103,28 @@ class Router {
                 app.innerHTML = this.getErrorPage();
             }
         } else {
-            // 404 - redirect to home or show error
-            this.navigate('/');
+            // 404 Page
+            const path = this.getPath();
+            // Don't show 404 for root path if it somehow slips through
+            if (path === '/' || path === '') {
+                this.navigate('/home');
+                return;
+            }
+
+            app.innerHTML = `
+              <div class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+                <div class="size-20 bg-surface-dark rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-lg">
+                  <span class="material-symbols-outlined text-4xl text-primary">explore_off</span>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">Page Not Found</h1>
+                <p class="text-gray-400 mb-8 max-w-xs mx-auto">The path <span class="text-primary font-mono text-xs bg-white/10 px-2 py-0.5 rounded">${path}</span> led nowhere.</p>
+                <button data-navigate="/home" class="bg-primary hover:bg-[#0ebf48] text-background-dark px-8 py-3.5 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2">
+                  <span class="material-symbols-outlined">home</span>
+                  Back Home
+                </button>
+              </div>
+            `;
+            this.initializePageEvents();
         }
     }
 
