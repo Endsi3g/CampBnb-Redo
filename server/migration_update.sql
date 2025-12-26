@@ -1,3 +1,10 @@
+-- Wrapped in transaction for atomicity
+BEGIN;
+
+-- Validating data: Remove invalid bookings that would violate the new constraint
+-- This ensures the CHECK constraint can be applied successfully
+DELETE FROM "Booking" WHERE "checkOut" <= "checkIn";
+
 -- Alter Listing price to Decimal
 ALTER TABLE "Listing" ALTER COLUMN "price" TYPE DECIMAL(10, 2);
 
@@ -14,3 +21,5 @@ ALTER TABLE "Booking" ADD CONSTRAINT "Booking_listingId_fkey" FOREIGN KEY ("list
 
 -- Add CHECK Constraint for Dates
 ALTER TABLE "Booking" ADD CONSTRAINT "check_dates" CHECK ("checkOut" > "checkIn");
+
+COMMIT;
