@@ -1,9 +1,13 @@
 /**
  * Write Review Page
  */
-import { reviews, listings } from '../api.js';
+import { reviews, listings, isAuthenticated } from '../api.js';
 
 export function writeReviewPage() {
+    if (!isAuthenticated()) {
+        window.location.hash = '/signin';
+        return;
+    }
     // Get listing ID from URL
     const hash = window.location.hash;
     const query = hash.split('?')[1];
