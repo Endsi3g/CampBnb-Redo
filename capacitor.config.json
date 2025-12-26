@@ -1,5 +1,6 @@
 {
   "appId": "com.campbnb.app",
   "appName": "CampBnB",
-  "webDir": "dist"
+  "webDir": "dist",
+  "bundledWebRuntime": false
 }

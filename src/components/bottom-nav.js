@@ -1,26 +1,43 @@
 /**
  * Bottom Navigation Component
- * @param {string} active - Active tab: 'explore' | 'saved' | 'trips' | 'profile'
  */
-export function bottomNav(active = 'explore') {
-    const tabs = [
-        { id: 'explore', icon: 'explore', label: 'Explore', route: '/home' },
-        { id: 'saved', icon: 'favorite', label: 'Saved', route: '/profile' },
-        { id: 'trips', icon: 'luggage', label: 'Trips', route: '/profile' },
-        { id: 'profile', icon: 'account_circle', label: 'Profile', route: '/profile' },
-    ];
+export function bottomNav(activeTab) {
+  const tabs = [
+    { icon: 'explore', label: 'Explore', href: '/home', id: 'home' },
+    { icon: 'favorite', label: 'Saved', href: '/saved', id: 'saved' },
+    { icon: 'calendar_month', label: 'Trips', href: '/trips', id: 'trips' },
+    { icon: 'account_circle', label: 'Profile', href: '/profile', id: 'profile' }
+  ];
+
+  return `
+    <nav class="fixed bottom-0 left-0 w-full bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-gray-200 dark:border-white/5 pb-safe-bottom z-50 transition-transform duration-300">
+      <div class="flex justify-around items-center px-2 py-3">
+        ${tabs.map(tab => {
+    // Determine active state - 'profile' is active for saved/trips too if we are in profile page
+    // But we can be more specific if we want, or just stick to 'profile' highlighting
+    // For now, if activeTab is 'profile', we highlight profile.
+    // But if we are in 'saved' tab, we might want to highlight 'saved'.
+    // The current implementation of profile passes 'profile' as activeTab.
+    // Let's rely on the passed activeTab.
+
+    const isActive = tab.id === activeTab;
 
     return `
-    <div class="fixed bottom-0 left-0 w-full z-50">
-      <div class="absolute inset-0 bg-background-dark/80 backdrop-blur-lg border-t border-white/5"></div>
-      <div class="relative flex justify-around items-center h-[88px] pb-6 px-2">
-        ${tabs.map(tab => `
-          <button data-navigate="${tab.route}" class="flex flex-col items-center justify-center w-full gap-1 ${active === tab.id ? 'text-primary' : 'text-gray-500 hover:text-gray-300'} transition-colors">
-            <span class="material-symbols-outlined text-[28px] ${active === tab.id ? 'icon-filled' : ''}">${tab.icon}</span>
-            <span class="text-[10px] font-medium">${tab.label}</span>
-          </button>
-        `).join('')}
+            <button data-navigate="${tab.href}" class="flex flex-col items-center gap-1 min-w-[64px] group opacity-100">
+              <span class="material-symbols-outlined text-[26px] transition-all duration-300 ${isActive ? 'text-primary icon-filled scale-110 drop-shadow-[0_0_12px_rgba(17,212,82,0.4)]' : 'text-slate-400 group-hover:text-primary/70'}">
+                ${tab.icon}
+              </span>
+              <span class="text-[10px] font-medium transition-colors ${isActive ? 'text-primary' : 'text-slate-500 group-hover:text-primary/70'}">
+                ${tab.label}
+              </span>
+            </button>
+            `;
+  }).join('')}
       </div>
-    </div>
-  `;
+    </nav>
+    <script>
+      // Re-attach navigation listeners if needed (though usually handled by page)
+      // This is just a string return, so the page must handle it
+    </script>
+    `;
 }

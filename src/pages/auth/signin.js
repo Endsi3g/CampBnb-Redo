@@ -1,16 +1,77 @@
 /**
  * Sign In Page
  */
+import { auth } from '../../api.js';
+
 export function signinPage() {
-    return `
+  // Set up form handler after render
+  setTimeout(() => {
+    const form = document.querySelector('#signin-form');
+    const submitBtn = document.querySelector('#signin-btn');
+    const errorDiv = document.querySelector('#signin-error');
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.querySelector('#email').value;
+        const password = document.querySelector('#password').value;
+
+        if (!email || !password) {
+          showError('Please fill in all fields');
+          return;
+        }
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="animate-spin material-symbols-outlined">progress_activity</span> Signing in...';
+        hideError();
+
+        try {
+          await auth.login(email, password);
+          window.location.hash = '/home';
+        } catch (error) {
+          showError(error.message || 'Invalid email or password');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Sign In';
+        }
+      });
+    }
+
+    function showError(message) {
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function hideError() {
+      if (errorDiv) {
+        errorDiv.classList.add('hidden');
+      }
+    }
+
+    // Password visibility toggle
+    const toggleBtn = document.querySelector('#toggle-password');
+    const passwordInput = document.querySelector('#password');
+    if (toggleBtn && passwordInput) {
+      toggleBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        toggleBtn.querySelector('span').textContent = isPassword ? 'visibility' : 'visibility_off';
+      });
+    }
+  }, 0);
+
+  return `
     <div class="relative flex flex-col min-h-screen w-full">
       <div class="relative w-full h-[38vh] min-h-[300px] shrink-0">
         <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFqdK1y4mtadD2w9Ut04Ypjz3xfMqfHFbf8FCzk2pFv_Dhcxs13EtA0zp-7nFVkhXFnF5iaat_VfUbEsqdL7wyXXmaFHsK-zJ-WHdUwHGSb_tRld6TyV_I4ainXjnW1DgSVrCyDkiEH9OUtOqjXUehbpeRrUyNCQn2atLnZmlf1mMSrFDj3wzzg0K3zCrx4Z5oOoij0uVZ0N1ChowtHwN-T5xe73BnDJ6TSn-vrEWe4NdHosGrzLMkfjWwPZQVWen13sb6cFV9Pefa');"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-black/20 via-background-dark/50 to-background-dark"></div>
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/80"></div>
         
         <div class="absolute inset-0 flex flex-col items-center justify-center z-10 pb-8">
           <div class="size-16 rounded-2xl bg-primary/90 backdrop-blur-sm flex items-center justify-center shadow-2xl mb-4 border border-white/20 transform -rotate-6">
-            <span class="material-symbols-outlined text-background-dark text-4xl">camping</span>
+            <span class="material-symbols-outlined absolute left-3 top-3.5 h-5 w-5 text-gray-400 shrink-0">mail</span>
           </div>
           <h1 class="text-3xl font-bold text-white tracking-tight drop-shadow-md">CampBnB</h1>
           <p class="text-gray-200 font-medium text-sm tracking-wide bg-black/20 px-3 py-1 rounded-full backdrop-blur-md mt-2 border border-white/10">Find your wild.</p>
@@ -29,14 +90,17 @@ export function signinPage() {
           <p class="text-secondary-text text-sm">Sign in to book your next adventure.</p>
         </div>
         
-        <form class="flex flex-col gap-5" onsubmit="event.preventDefault()">
+        <!-- Error Message -->
+        <div id="signin-error" class="hidden mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm"></div>
+        
+        <form id="signin-form" class="flex flex-col gap-5">
           <div class="space-y-1.5">
             <label class="text-sm font-semibold text-gray-300 ml-1" for="email">Email address</label>
             <div class="relative group">
               <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
                 <span class="material-symbols-outlined text-[20px]">mail</span>
               </div>
-              <input class="w-full bg-[#1E2E23] border border-white/10 rounded-xl pl-11 pr-4 py-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-medium shadow-sm" id="email" placeholder="you@example.com" type="email"/>
+              <input id="email" type="email" autocomplete="email" required class="block w-full rounded-xl border-0 bg-white/5 py-3.5 pl-10 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6" placeholder="name@example.com">
             </div>
           </div>
           
@@ -46,8 +110,8 @@ export function signinPage() {
               <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
                 <span class="material-symbols-outlined text-[20px]">lock</span>
               </div>
-              <input class="w-full bg-[#1E2E23] border border-white/10 rounded-xl pl-11 pr-12 py-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-medium shadow-sm" id="password" placeholder="••••••••" type="password"/>
-              <button class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1" type="button">
+              <input class="w-full bg-[#1E2E23] border border-white/10 rounded-xl pl-11 pr-12 py-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all font-medium shadow-sm" id="password" placeholder="••••••••" type="password" required/>
+              <button id="toggle-password" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1" type="button">
                 <span class="material-symbols-outlined text-[20px]">visibility_off</span>
               </button>
             </div>
@@ -57,7 +121,7 @@ export function signinPage() {
             <a data-navigate="/forgot-password" class="text-sm font-semibold text-secondary-text hover:text-primary transition-colors cursor-pointer">Forgot password?</a>
           </div>
           
-          <button data-navigate="/home" class="w-full bg-primary hover:bg-[#0ebf48] text-background-dark font-bold text-lg py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all mt-2 flex items-center justify-center gap-2" type="button">
+          <button id="signin-btn" class="w-full bg-primary hover:bg-[#0ebf48] text-background-dark font-bold text-lg py-4 rounded-xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all mt-2 flex items-center justify-center gap-2" type="submit">
             Sign In
           </button>
         </form>

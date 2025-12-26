@@ -20,6 +20,9 @@ import { priceBreakdownPage } from './pages/booking/price-breakdown.js';
 import { confirmationPage } from './pages/booking/confirmation.js';
 import { profilePage } from './pages/profile.js';
 import { settingsPage } from './pages/settings.js';
+import { writeReviewPage } from './pages/write-review.js';
+import { hostDashboardPage } from './pages/host/dashboard.js';
+import { createListingPage } from './pages/host/create-listing.js';
 
 // Register all routes
 router
@@ -47,7 +50,13 @@ router
 
   // Profile & Settings
   .register('/profile', profilePage)
-  .register('/settings', settingsPage);
+  .register('/trips', () => import('./pages/trips.js').then(m => m.tripsPage()))
+  .register('/saved', () => import('./pages/saved.js').then(m => m.savedPage()))
+  .register('/settings', settingsPage)
+  .register('/host/dashboard', hostDashboardPage)
+  .register('/host/listings/new', createListingPage)
+  .register('/host/listings/:id', (params) => import('./pages/host/edit-listing.js').then(m => m.editListingPage(params)))
+  .register('/host/bookings', () => import('./pages/host/bookings.js').then(m => m.hostBookingsPage()));
 
 // Register service worker for PWA support (production only)
 // vite-plugin-pwa generates sw.js only in production builds

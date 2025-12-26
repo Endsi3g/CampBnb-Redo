@@ -1,18 +1,233 @@
 /**
  * Home / Explore Page
+ * Fetches real listings from API
  */
 import { bottomNav } from '../components/bottom-nav.js';
+import { listings, favorites, isAuthenticated, getCurrentUser } from '../api.js';
 
-export function homePage() {
-    return `
+// Store current filter state
+let currentFilter = 'TENT';
+let listingsData = [];
+let userFavorites = new Set();
+
+/**
+ * Render a listing card
+ */
+function renderListingCard(listing) {
+  const isFavorited = userFavorites.has(listing.id);
+  return `
+        <div class="px-4">
+          <div data-navigate="/listing/${listing.id}" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
+            <div class="relative w-full aspect-4/3 bg-gray-800">
+              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("${listing.images?.[0] || 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800'}");'></div>
+              <button data-favorite="${listing.id}" class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center ${isFavorited ? 'text-primary' : 'text-white'} hover:bg-primary hover:text-background-dark transition-colors z-10" onclick="event.stopPropagation()">
+                <span class="material-symbols-outlined text-[20px] ${isFavorited ? 'icon-filled' : ''}">favorite</span>
+              </button>
+              <div class="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md flex items-center gap-1">
+                <span class="material-symbols-outlined text-primary text-[14px] icon-filled">star</span>
+                <span class="text-white text-xs font-bold">${listing.rating?.toFixed(1) || '0.0'}</span>
+              </div>
+              ${listing.isSuperhost ? `
+              <div class="absolute top-3 left-3 px-2 py-1 rounded-lg bg-primary/90 backdrop-blur-md">
+                <span class="text-background-dark text-[10px] font-bold uppercase tracking-wider">Superhost</span>
+              </div>
+              ` : ''}
+            </div>
+            <div class="flex flex-col gap-1 p-4">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="text-white text-lg font-bold leading-tight">${listing.title}</h4>
+                  <p class="text-gray-400 text-sm flex items-center gap-1 mt-1">
+                    <span class="material-symbols-outlined text-[16px]">location_on</span>
+                    ${listing.location}
+                  </p>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="text-primary text-lg font-bold">$${Math.round(listing.price)}</span>
+                  <span class="text-gray-500 text-xs">/ night</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    `;
+}
+
+/**
+ * Render loading skeleton
+ */
+function renderSkeleton() {
+  return `
+        <div class="px-4 animate-pulse">
+          <div class="rounded-2xl bg-surface-dark overflow-hidden">
+            <div class="w-full aspect-4/3 bg-gray-700"></div>
+            <div class="p-4 space-y-3">
+              <div class="h-5 bg-gray-700 rounded w-3/4"></div>
+              <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+    `;
+}
+
+/**
+ * Get greeting based on time of day
+ */
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/**
+ * Initialize page events
+ */
+function initHomeEvents() {
+  // Category filter buttons
+  document.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const type = btn.dataset.filter;
+      if (type === currentFilter) return;
+
+      currentFilter = type;
+      updateFilterUI();
+      await loadListings();
+    });
+  });
+
+  // Favorite buttons
+  document.querySelectorAll('[data-favorite]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!isAuthenticated()) {
+        window.location.hash = '/signin';
+        return;
+      }
+
+      const listingId = btn.dataset.favorite;
+      const isFavorited = userFavorites.has(listingId);
+
+      try {
+        if (isFavorited) {
+          await favorites.remove(listingId);
+          userFavorites.delete(listingId);
+        } else {
+          await favorites.add(listingId);
+          userFavorites.add(listingId);
+        }
+
+        // Update button UI
+        const icon = btn.querySelector('span');
+        btn.classList.toggle('text-primary', !isFavorited);
+        btn.classList.toggle('text-white', isFavorited);
+        icon.classList.toggle('icon-filled', !isFavorited);
+      } catch (error) {
+        console.error('Error toggling favorite:', error);
+      }
+    });
+  });
+}
+
+/**
+ * Update filter UI
+ */
+function updateFilterUI() {
+  document.querySelectorAll('[data-filter]').forEach(btn => {
+    const isActive = btn.dataset.filter === currentFilter;
+    const container = btn.querySelector('.filter-icon');
+    const label = btn.querySelector('.filter-label');
+
+    if (container) {
+      container.classList.toggle('bg-primary', isActive);
+      container.classList.toggle('text-background-dark', isActive);
+      container.classList.toggle('shadow-[0_0_15px_rgba(17,212,82,0.3)]', isActive);
+      container.classList.toggle('bg-surface-dark', !isActive);
+      container.classList.toggle('text-gray-400', !isActive);
+      container.classList.toggle('border', !isActive);
+      container.classList.toggle('border-white/5', !isActive);
+    }
+    if (label) {
+      label.classList.toggle('text-primary', isActive);
+      label.classList.toggle('font-semibold', isActive);
+      label.classList.toggle('text-gray-400', !isActive);
+      label.classList.toggle('font-medium', !isActive);
+    }
+  });
+}
+
+/**
+ * Load listings from API
+ */
+async function loadListings() {
+  const listingsContainer = document.querySelector('#listings-container');
+  if (!listingsContainer) return;
+
+  // Show loading
+  listingsContainer.innerHTML = renderSkeleton() + renderSkeleton() + renderSkeleton();
+
+  try {
+    const response = await listings.search({ type: currentFilter, limit: 10 });
+    listingsData = response.data || response || [];
+
+    if (listingsData.length === 0) {
+      listingsContainer.innerHTML = `
+                <div class="px-4 py-12 text-center">
+                    <span class="material-symbols-outlined text-4xl text-gray-600 mb-2">search_off</span>
+                    <p class="text-gray-400">No listings found for this category</p>
+                </div>
+            `;
+    } else {
+      listingsContainer.innerHTML = listingsData.map(renderListingCard).join('');
+    }
+
+    initHomeEvents();
+  } catch (error) {
+    console.error('Error loading listings:', error);
+    listingsContainer.innerHTML = `
+            <div class="px-4 py-12 text-center">
+                <span class="material-symbols-outlined text-4xl text-red-400 mb-2">error</span>
+                <p class="text-gray-400">Failed to load listings</p>
+                <button onclick="loadListings()" class="mt-4 text-primary font-semibold">Try Again</button>
+            </div>
+        `;
+  }
+}
+
+/**
+ * Load user favorites
+ */
+async function loadFavorites() {
+  if (!isAuthenticated()) return;
+
+  try {
+    const response = await favorites.list();
+    const favs = response.data || response || [];
+    userFavorites = new Set(favs.map(f => f.listingId || f.id));
+  } catch (error) {
+    console.error('Error loading favorites:', error);
+  }
+}
+
+export async function homePage() {
+  const user = getCurrentUser();
+  const greeting = getGreeting();
+
+  // Load favorites in background
+  loadFavorites();
+
+  // Delay loading listings to allow render first
+  setTimeout(() => loadListings(), 50);
+
+  return `
     <div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">
       <!-- Header / Greeting -->
       <div class="px-4 pt-12 pb-2 flex justify-between items-center">
         <div>
-          <p class="text-sm font-medium text-gray-400">Good evening,</p>
+          <p class="text-sm font-medium text-gray-400">${greeting},</p>
           <h1 class="text-2xl font-bold tracking-tight text-white">Find your wild</h1>
         </div>
-        <div class="h-10 w-10 rounded-full bg-cover bg-center border-2 border-primary/30" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCr_iMASV60IjyhTzFzUeGAP13KidyUyO2GDJews-B4R7i9vZ2kr9_tHLW3whb87Ja1VOO6Vwerew_aRg-Ye2fiNWf-UkLt7IO-sNvacPM_OJjcmnKEsOkOLZmYzCCqOkjBA3by6iI4yxO13icPRGgoeJZdeg8N3z9d0J5zC5w1P2adt3RAiD5_mckOBEnEi17FOLBi40Ir3_l9tpfUuKzUQNIIO1S6Tfi4GcnWX0A1XCGNnfZJFiz72a3ajVSpsQ2ybykhuFk7-sBx');"></div>
+        <div data-navigate="/profile" class="cursor-pointer h-10 w-10 rounded-full bg-cover bg-center border-2 border-primary/30" style="background-image: url('${user?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user?.name || 'Guest') + '&background=1E2E23&color=11D452'}');"></div>
       </div>
       
       <!-- Search Bar -->
@@ -51,139 +266,63 @@ export function homePage() {
       <!-- Category Filters -->
       <div class="pt-2 pb-6">
         <div class="flex gap-4 px-4 overflow-x-auto no-scrollbar snap-x">
-          <!-- Active Item -->
-          <button class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
-            <div class="h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(17,212,82,0.3)] transition-transform group-active:scale-95">
-              <span class="material-symbols-outlined text-background-dark text-[28px]">camping</span>
+          <button data-filter="TENT" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(17,212,82,0.3)] transition-transform group-active:scale-95 text-background-dark">
+              <span class="material-symbols-outlined text-[28px]">camping</span>
             </div>
-            <span class="text-primary text-xs font-semibold">Tent</span>
+            <span class="filter-label text-primary text-xs font-semibold">Tent</span>
           </button>
-          <!-- Inactive Items -->
-          <button class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
-            <div class="h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+          <button data-filter="RV_SPOT" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
               <span class="material-symbols-outlined text-[28px]">rv_hookup</span>
             </div>
-            <span class="text-gray-400 text-xs font-medium">RV Spots</span>
+            <span class="filter-label text-gray-400 text-xs font-medium">RV Spots</span>
           </button>
-          <button class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
-            <div class="h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+          <button data-filter="CABIN" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
               <span class="material-symbols-outlined text-[28px]">cottage</span>
             </div>
-            <span class="text-gray-400 text-xs font-medium">Cabins</span>
+            <span class="filter-label text-gray-400 text-xs font-medium">Cabins</span>
           </button>
-          <button class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
-            <div class="h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+          <button data-filter="GLAMPING" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
               <span class="material-symbols-outlined text-[28px]">beach_access</span>
             </div>
-            <span class="text-gray-400 text-xs font-medium">Glamping</span>
+            <span class="filter-label text-gray-400 text-xs font-medium">Glamping</span>
           </button>
-          <button class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
-            <div class="h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+          <button data-filter="BACKCOUNTRY" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
               <span class="material-symbols-outlined text-[28px]">forest</span>
             </div>
-            <span class="text-gray-400 text-xs font-medium">Backcountry</span>
+            <span class="filter-label text-gray-400 text-xs font-medium">Backcountry</span>
+          </button>
+          <button data-filter="TREEHOUSE" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+              <span class="material-symbols-outlined text-[28px]">park</span>
+            </div>
+            <span class="filter-label text-gray-400 text-xs font-medium">Treehouse</span>
+          </button>
+          <button data-filter="YURT" class="flex flex-col items-center gap-2 min-w-[72px] snap-start group">
+            <div class="filter-icon h-14 w-14 rounded-full bg-surface-dark border border-white/5 flex items-center justify-center text-gray-400 group-hover:bg-surface-dark-hover transition-colors group-active:scale-95">
+              <span class="material-symbols-outlined text-[28px]">holiday_village</span>
+            </div>
+            <span class="filter-label text-gray-400 text-xs font-medium">Yurt</span>
           </button>
         </div>
       </div>
       
-      <!-- Featured / Popular Section -->
+      <!-- Listings Section -->
       <div class="flex flex-col gap-6">
         <div class="flex items-center justify-between px-4">
           <h3 class="text-white text-xl font-bold leading-tight">Popular near you</h3>
-          <a class="text-primary text-sm font-semibold cursor-pointer">See all</a>
+          <a data-navigate="/search" class="text-primary text-sm font-semibold cursor-pointer">See all</a>
         </div>
         
-        <!-- Card 1 -->
-        <div class="px-4">
-          <div data-navigate="/listing/1" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
-            <div class="relative w-full aspect-[4/3] bg-gray-800">
-              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDKayLfsEU86yJL59j8CoQpQmK6AsHFhfPKk9sOc--tZq78QvG_bimkDMY8E7EPhh4hQFIl2H83MRYAJaNUU4pgGGONn-vdadTnDmVuR_7N9NB61Vjy1JDD9hRnTuZ1oQaa00EPCYXqp6Ta-FdBtVUBQf5MYMy6o-sFCFdVB9DfhXJYz2w9ZcGf1l2jBOT3x95Up92rD__ydqNeq2N_rnvmTwvSQTZxo_fbh-1QxwHdyC83f6UU3t6LzDchu2i5a2M47r3xY9wGGk0l");'></div>
-              <button class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-primary hover:text-background-dark transition-colors z-10">
-                <span class="material-symbols-outlined text-[20px]">favorite</span>
-              </button>
-              <div class="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md flex items-center gap-1">
-                <span class="material-symbols-outlined text-primary text-[14px] icon-filled">star</span>
-                <span class="text-white text-xs font-bold">4.9</span>
-              </div>
-            </div>
-            <div class="flex flex-col gap-1 p-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="text-white text-lg font-bold leading-tight">Lake Louise Campground</h4>
-                  <p class="text-gray-400 text-sm flex items-center gap-1 mt-1">
-                    <span class="material-symbols-outlined text-[16px]">location_on</span>
-                    Banff, AB
-                  </p>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span class="text-primary text-lg font-bold">$45</span>
-                  <span class="text-gray-500 text-xs">/ night</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Card 2 -->
-        <div class="px-4">
-          <div data-navigate="/listing/2" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
-            <div class="relative w-full aspect-[4/3] bg-gray-800">
-              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBbVI21qDnx7aDX_CueMbEkQ_sgzrvtP_u_f2_dFaJsryQ_KacqQwgAAFQZ_USYTx_exWBsyGYvx3Qdfp6TB1kiWurFO9RPtTtCO85I6cAb7BK25SmhkajRT5C-N-4RB4uIUrnqgO245bgg8FXtxDBrxlKMx6nz6CgE6l9sH5cXxdmbqXbCwSSbXkxQaCwfDNKK7HKcc-0FA0elSmqhuP7X6GUBEYkh5TjBceGUtG-jmwuazQON2AOiB3mT0VOT_OGth8mGRvmbwsMM");'></div>
-              <button class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-primary hover:text-background-dark transition-colors z-10">
-                <span class="material-symbols-outlined text-[20px]">favorite</span>
-              </button>
-              <div class="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md flex items-center gap-1">
-                <span class="material-symbols-outlined text-primary text-[14px] icon-filled">star</span>
-                <span class="text-white text-xs font-bold">4.8</span>
-              </div>
-            </div>
-            <div class="flex flex-col gap-1 p-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="text-white text-lg font-bold leading-tight">Whispering Pines Cabin</h4>
-                  <p class="text-gray-400 text-sm flex items-center gap-1 mt-1">
-                    <span class="material-symbols-outlined text-[16px]">location_on</span>
-                    Jasper, AB
-                  </p>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span class="text-primary text-lg font-bold">$120</span>
-                  <span class="text-gray-500 text-xs">/ night</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Card 3 -->
-        <div class="px-4 pb-8">
-          <div data-navigate="/listing/3" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
-            <div class="relative w-full aspect-[4/3] bg-gray-800">
-              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD4jzBplWFghB8NdDCWXMMVzQP-e6CWCWp28jXwhVSmwUoA6c19LrgVLbRyRy4FKCnYiNVxkacdsNQB_f7XQcIVFK3Vd8Aer3hyjUK6u8J5m7Q5ZasAcZWVgAcPTqPeUcZQPM69KjIbf2bNul72qZDDXgJkBG3MAWlegMG2NNimyfbXiCDWGzhrn8vnFeZzYSMroCOg6hh4nZKj0BltqhmeIKLjL8ki0agkwXMy1VkIFiB6JAtOkC_2B21yK7RvQISv8WxFRu-IWrqz");'></div>
-              <button class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-primary hover:text-background-dark transition-colors z-10">
-                <span class="material-symbols-outlined text-[20px]">favorite</span>
-              </button>
-              <div class="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md flex items-center gap-1">
-                <span class="material-symbols-outlined text-primary text-[14px] icon-filled">star</span>
-                <span class="text-white text-xs font-bold">4.5</span>
-              </div>
-            </div>
-            <div class="flex flex-col gap-1 p-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="text-white text-lg font-bold leading-tight">Lakeside RV Park</h4>
-                  <p class="text-gray-400 text-sm flex items-center gap-1 mt-1">
-                    <span class="material-symbols-outlined text-[16px]">location_on</span>
-                    Kelowna, BC
-                  </p>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span class="text-primary text-lg font-bold">$60</span>
-                  <span class="text-gray-500 text-xs">/ night</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <!-- Dynamic Listings Container -->
+        <div id="listings-container" class="flex flex-col gap-6">
+          ${renderSkeleton()}
+          ${renderSkeleton()}
+          ${renderSkeleton()}
         </div>
       </div>
       

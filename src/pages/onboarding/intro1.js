@@ -2,16 +2,16 @@
  * Onboarding Intro Card 1 - Find your next outdoor escape
  */
 export function intro1Page() {
-    return `
+  return `
     <div class="relative flex h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-hidden">
       <!-- Full-Bleed Background Image -->
       <div class="absolute inset-0 z-0">
         <div class="h-full w-full bg-center bg-no-repeat bg-cover transform scale-105" 
              style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBo2UOtiCMp4vU2Z_iyKcc6FjxwQZJe225RIj62tCiNRJPL1WGv1WzBaNvIkzejOnvqM0bj4Yf_d2P9i-2dYbwFApelMAr0QPbDwkV6A1-_obyY9eTEqV8slk0HRDjpRUxDz9ZsSU8XWRY9HJjNQQb0rkUnSGTkpyZgQiAvaod1zcLTkkRaAvXMlg5BYXmuKwy8dwzko-OqsoY6gG1MVJ2WrkYNAK38QUhKUky0LUvCPuKgewlMTrxalFMHr7xmV-qBC-CSif06qQjn");'>
         </div>
-        <!-- Gradient Overlays -->
-        <div class="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/80 to-transparent pt-40"></div>
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?w=800&q=80');"></div>
+        <div class="absolute inset-0 bg-linear-to-b from-transparent via-black/40 to-background-dark"></div>
+        <div class="absolute inset-0 bg-linear-to-t from-background-dark via-background-dark/80 to-transparent opacity-90"></div>
       </div>
       
       <!-- Top Navigation Area -->

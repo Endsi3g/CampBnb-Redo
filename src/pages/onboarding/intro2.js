@@ -2,7 +2,7 @@
  * Onboarding Intro Card 2 - Discover Nature's Best Kept Secrets
  */
 export function intro2Page() {
-    return `
+  return `
     <div class="relative flex h-screen w-full flex-col justify-between overflow-hidden bg-background-dark">
       <!-- Full Bleed Background Image -->
       <div class="absolute inset-0 z-0 h-full w-full bg-cover bg-center" 
@@ -10,7 +10,7 @@ export function intro2Page() {
       </div>
       
       <!-- Gradient Overlay -->
-      <div class="absolute inset-0 z-0 bg-gradient-to-t from-background-dark via-background-dark/80 to-transparent/10 opacity-95"></div>
+      <div class="absolute inset-0 bg-linear-to-t from-background-dark via-background-dark/80 to-transparent opacity-90"></div>
       
       <!-- Top Bar: Skip Action -->
       <div class="relative z-10 flex w-full items-center justify-end p-6 pt-14">

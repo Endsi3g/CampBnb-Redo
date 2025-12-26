@@ -2,7 +2,7 @@
  * Onboarding Intro Card 3 - Adventure Awaits (Final with Get Started)
  */
 export function intro3Page() {
-    return `
+  return `
     <div class="relative flex h-screen w-full flex-col overflow-hidden bg-background-dark">
       <!-- Full Bleed Background Image -->
       <div class="absolute inset-0 z-0 h-full w-full bg-cover bg-center bg-no-repeat" 
@@ -10,7 +10,7 @@ export function intro3Page() {
       </div>
       
       <!-- Gradient Overlay -->
-      <div class="absolute inset-0 z-10 bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent pt-32"></div>
+      <div class="absolute inset-0 bg-linear-to-t from-background-dark via-background-dark/80 to-transparent opacity-90"></div>
       
       <!-- Content Container -->
       <div class="relative z-20 flex h-full flex-col justify-end px-6 pb-8">
