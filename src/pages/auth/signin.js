@@ -67,7 +67,7 @@ export function signinPage() {
     <div class="relative flex flex-col min-h-screen w-full">
       <div class="relative w-full h-[38vh] min-h-[300px] shrink-0">
         <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFqdK1y4mtadD2w9Ut04Ypjz3xfMqfHFbf8FCzk2pFv_Dhcxs13EtA0zp-7nFVkhXFnF5iaat_VfUbEsqdL7wyXXmaFHsK-zJ-WHdUwHGSb_tRld6TyV_I4ainXjnW1DgSVrCyDkiEH9OUtOqjXUehbpeRrUyNCQn2atLnZmlf1mMSrFDj3wzzg0K3zCrx4Z5oOoij0uVZ0N1ChowtHwN-T5xe73BnDJ6TSn-vrEWe4NdHosGrzLMkfjWwPZQVWen13sb6cFV9Pefa');"></div>
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/80"></div>
+          <div class="absolute inset-0 bg-linear-to-b from-transparent via-black/40 to-black/80"></div>
         
         <div class="absolute inset-0 flex flex-col items-center justify-center z-10 pb-8">
           <div class="size-16 rounded-2xl bg-primary/90 backdrop-blur-sm flex items-center justify-center shadow-2xl mb-4 border border-white/20 transform -rotate-6">
@@ -127,9 +127,9 @@ export function signinPage() {
         </form>
         
         <div class="relative flex py-8 items-center">
-          <div class="flex-grow border-t border-white/10"></div>
-          <span class="flex-shrink-0 mx-4 text-gray-500 text-xs font-medium uppercase tracking-wider">Or continue with</span>
-          <div class="flex-grow border-t border-white/10"></div>
+          <div class="grow border-t border-white/10"></div>
+          <span class="shrink-0 mx-4 text-gray-500 text-xs font-medium uppercase tracking-wider">Or continue with</span>
+          <div class="grow border-t border-white/10"></div>
         </div>
         
         <div class="grid grid-cols-2 gap-4">

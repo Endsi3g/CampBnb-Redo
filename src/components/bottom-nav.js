@@ -4,6 +4,7 @@
 export function bottomNav(activeTab) {
   const tabs = [
     { icon: 'explore', label: 'Explore', href: '/home', id: 'home' },
+    { icon: 'map', label: 'Map', href: '/map', id: 'map' },
     { icon: 'favorite', label: 'Saved', href: '/saved', id: 'saved' },
     { icon: 'calendar_month', label: 'Trips', href: '/trips', id: 'trips' },
     { icon: 'account_circle', label: 'Profile', href: '/profile', id: 'profile' }

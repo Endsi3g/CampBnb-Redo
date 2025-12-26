@@ -12,6 +12,7 @@ import { signinPage } from './pages/auth/signin.js';
 import { signupPage } from './pages/auth/signup.js';
 import { forgotPasswordPage } from './pages/auth/forgot-password.js';
 import { homePage } from './pages/home.js';
+import { mapPage } from './pages/map.js';
 import { searchPage } from './pages/search.js';
 import { listingDetailsPage } from './pages/listing-details.js';
 import { datePickerPage } from './pages/booking/date-picker.js';
@@ -39,6 +40,7 @@ router
 
   // Main App
   .register('/home', homePage)
+  .register('/map', mapPage)
   .register('/search', searchPage)
   .register('/listing/:id', listingDetailsPage)
 

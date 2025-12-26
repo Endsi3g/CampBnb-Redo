@@ -194,6 +194,9 @@ async function loadListings() {
   }
 }
 
+// Expose to window for inline onclick handlers
+window.loadListings = loadListings;
+
 /**
  * Load user favorites
  */
