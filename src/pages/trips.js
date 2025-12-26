@@ -2,7 +2,7 @@
  * Trips Page
  * Displays upcoming and past bookings
  */
-import { bookings } from '../api.js';
+import { bookings, isAuthenticated } from '../api.js';
 import { bottomNav } from '../components/bottom-nav.js';
 
 export function tripsPage() {

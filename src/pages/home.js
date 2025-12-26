@@ -24,7 +24,7 @@ function renderListingCard(listing) {
           <div data-navigate="/listing/${listing.id}" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
             <div class="relative w-full aspect-4/3 bg-gray-800">
               <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("${imageUrl}");'></div>
-              <button data-favorite="${listing.id}" class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center ${isFavorited ? 'text-primary' : 'text-white'} hover:bg-primary hover:text-background-dark transition-colors z-10" onclick="event.stopPropagation()">
+              <button data-favorite="${listing.id}" class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center ${isFavorited ? 'text-primary' : 'text-white'} hover:bg-primary hover:text-background-dark transition-colors z-10">
                 <span class="material-symbols-outlined text-[20px] ${isFavorited ? 'icon-filled' : ''}">favorite</span>
               </button>
               <div class="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md flex items-center gap-1">
@@ -197,9 +197,13 @@ async function loadListings() {
             <div class="px-4 py-12 text-center">
                 <span class="material-symbols-outlined text-4xl text-red-400 mb-2">error</span>
                 <p class="text-gray-400">Failed to load listings</p>
-                <button onclick="loadListings()" class="mt-4 text-primary font-semibold">Try Again</button>
+                <button id="retry-listings-btn" class="mt-4 text-primary font-semibold">Try Again</button>
             </div>
         `;
+    const retryBtn = listingsContainer.querySelector('#retry-listings-btn');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => loadListings());
+    }
   }
 }
 
@@ -225,14 +229,18 @@ export async function homePage() {
   const user = getCurrentUser();
   const greeting = getGreeting();
 
-  // Load favorites in background
-  loadFavorites();
 
   // Delay loading listings to allow render first
-  waitForElement('#listings-container').then(() => {
-    initStaticEvents();
-    loadListings();
-  });
+  waitForElement('#listings-container')
+    .then(async () => {
+      // Ensure favorites are loaded first so heart icons resolve correctly
+      await loadFavorites();
+      initStaticEvents();
+      loadListings();
+    })
+    .catch(err => {
+      console.error('Failed to initialize home page:', err);
+    });
 
   return `
     <div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">
@@ -345,5 +353,5 @@ export async function homePage() {
       
       ${bottomNav('explore')}
     </div>
-  `;
+      `;
 }

@@ -29,14 +29,18 @@ export async function mapPage() {
     }
 
     // Initialize map when DOM is ready
-    waitForElement('#map').then(() => {
-        initMap(allListings);
-    });
+    waitForElement('#map')
+        .then(() => {
+            initMap(allListings);
+        })
+        .catch(err => {
+            console.error('Failed to initialize map:', err);
+        });
 
     return `
     <div class="relative flex h-full min-h-screen w-full flex-col">
       <!-- Header -->
-      <div class="absolute top-0 left-0 w-full z-[1000] p-4 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
+      <div class="absolute top-0 left-0 w-full z-1000 p-4 bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
          <h1 class="text-2xl font-bold tracking-tight text-white drop-shadow-md">Explore Map</h1>
       </div>
 
@@ -87,7 +91,8 @@ function initMap(mapListings) {
             }
         }
 
-        if (!lat || !lng) return;
+        // Allow 0 as valid coordinate, but reject null/undefined
+        if (lat == null || lng == null) return;
 
         const title = escapeHtml(listing.title);
         const price = escapeHtml(listing.price);
@@ -117,10 +122,10 @@ function initMap(mapListings) {
             const popupNode = e.popup.getElement();
             if (popupNode) {
                 popupNode.querySelectorAll('[data-navigate]').forEach(el => {
-                    el.onclick = (evt) => {
+                    el.addEventListener('click', (evt) => {
                         evt.preventDefault();
                         window.location.hash = el.dataset.navigate;
-                    };
+                    });
                 });
             }
         });

@@ -220,7 +220,33 @@ export function editListingPage(params) {
         }
     }
 
-    waitForElement('#edit-listing-container').then(() => loadData());
+    waitForElement('#edit-listing-container')
+        .then(() => loadData())
+        .catch(err => {
+            console.error('Failed to initialize edit page:', err);
+            // Find or create container in the document body
+            let container = document.getElementById('edit-listing-container');
+            if (!container) {
+                // If container doesn't exist, try to find the parent or use body
+                const parent = document.querySelector('.min-h-screen') || document.body;
+                container = document.createElement('div');
+                container.id = 'edit-listing-container';
+                parent.appendChild(container);
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <span class="material-symbols-outlined text-4xl text-red-400 mb-2">error</span>
+                    <p class="text-gray-400">Failed to load editor</p>
+                    <button id="retry-edit-btn" class="mt-4 text-primary font-semibold">Retry</button>
+                </div>
+            `;
+
+            const retryBtn = container.querySelector('#retry-edit-btn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => window.location.reload());
+            }
+        });
 
     return `
     <div class="min-h-screen bg-background-light dark:bg-background-dark">

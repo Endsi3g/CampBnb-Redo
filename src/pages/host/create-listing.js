@@ -177,7 +177,34 @@ export function createListingPage() {
         }
     }
 
-    waitForElement('#create-listing-container').then(() => render());
+    waitForElement('#create-listing-container')
+        .then(() => render())
+        .catch(err => {
+            console.error('Failed to initialize create page:', err);
+            let container = document.getElementById('create-listing-container');
+            if (!container) {
+                // Create fallback container if original is missing
+                container = document.createElement('div');
+                container.id = 'create-listing-container';
+                // Append to main app container if possible, or body
+                const app = document.getElementById('app');
+                if (app) app.appendChild(container);
+                else document.body.appendChild(container);
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <span class="material-symbols-outlined text-4xl text-red-400 mb-2">error</span>
+                    <p class="text-gray-400">Failed to load page</p>
+                    <button id="retry-create-btn" class="mt-4 text-primary font-semibold">Retry</button>
+                </div>
+            `;
+
+            const retryBtn = container.querySelector('#retry-create-btn');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => window.location.reload());
+            }
+        });
 
     return `
     <div class="min-h-screen bg-background-light dark:bg-background-dark">
