@@ -8,7 +8,8 @@
     "dev": "vite",
     "dev:host": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

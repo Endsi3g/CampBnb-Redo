@@ -136,16 +136,20 @@ export const listings = {
 // ============ BOOKINGS API ============
 
 export const bookings = {
-    async list() {
+    async list(params = {}) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        return handleResponse(
-            supabase.from('Booking')
-                .select('*, listing:Listing(*)')
-                .eq('userId', user.id)
-                .order('checkIn', { ascending: true })
-        );
+        let query = supabase.from('Booking')
+            .select('*, listing:Listing(*)')
+            .eq('userId', user.id)
+            .order('checkIn', { ascending: true });
+
+        if (params.limit) {
+            query = query.limit(Number(params.limit));
+        }
+
+        return handleResponse(query);
     },
 
     async get(id) {

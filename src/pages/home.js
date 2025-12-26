@@ -226,7 +226,7 @@ async function loadFavorites() {
 }
 
 export async function homePage() {
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   const greeting = getGreeting();
 
 
