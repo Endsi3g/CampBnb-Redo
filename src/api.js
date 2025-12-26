@@ -1,122 +1,79 @@
 /**
- * CampBnB API Client
- * Handles all backend API communication
+ * CampBnB API Client - Supabase Native Version
+ * Handles direct database communication via Supabase SDK
  */
+import { supabase } from './lib/supabase.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
-/**
- * Get auth token from localStorage
- */
-function getToken() {
-    return localStorage.getItem('campbnb_token');
-}
-
-/**
- * Set auth token in localStorage
- */
-export function setToken(token) {
-    localStorage.setItem('campbnb_token', token);
-}
-
-/**
- * Remove auth token
- */
-export function clearToken() {
-    localStorage.removeItem('campbnb_token');
-    localStorage.removeItem('campbnb_user');
-}
-
-/**
- * Get current user from localStorage
- */
-export function getCurrentUser() {
-    const user = localStorage.getItem('campbnb_user');
-    return user ? JSON.parse(user) : null;
-}
-
-/**
- * Set current user in localStorage
- */
-export function setCurrentUser(user) {
-    localStorage.setItem('campbnb_user', JSON.stringify(user));
-}
-
-/**
- * Check if user is authenticated
- */
-export function isAuthenticated() {
-    return !!getToken();
-}
-
-/**
- * Make API request with authentication
- */
-async function apiRequest(endpoint, options = {}) {
-    const token = getToken();
-
-    const config = {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-            ...options.headers
-        },
-        ...options
-    };
-
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Request failed');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('API Error:', error);
-        throw error;
+// Helper to handle Supabase responses
+const handleResponse = async (promise) => {
+    const { data, error } = await promise;
+    if (error) {
+        console.error('Supabase Error:', error);
+        throw new Error(error.message);
     }
-}
+    return data;
+};
 
 // ============ AUTH API ============
 
 export const auth = {
     async register(email, password, name) {
-        const data = await apiRequest('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({ email, password, name })
+        // 1. Sign up auth user
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: { name }
+            }
         });
-        setToken(data.token);
-        setCurrentUser(data.user);
-        return data;
+
+        if (authError) throw new Error(authError.message);
+
+        // 2. Create public user profile (if not automatically created by trigger)
+        // Note: Ideally a Postgres Trigger handles this, but we'll do it manually for now if needed.
+        // Prisma schema says User table has email, name, etc.
+        // We might need to ensure the ID matches Supabase Auth ID.
+
+        return {
+            user: { ...authData.user, name },
+            token: authData.session?.access_token
+        };
     },
 
     async login(email, password) {
-        const data = await apiRequest('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
         });
-        setToken(data.token);
-        setCurrentUser(data.user);
-        return data;
+
+        if (error) throw new Error(error.message);
+
+        return {
+            user: data.user,
+            token: data.session.access_token
+        };
     },
 
     async me() {
-        const data = await apiRequest('/auth/me');
-        setCurrentUser(data.user);
-        return data.user;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        // Fetch additional profile data from 'User' table if needed
+        const { data: profile } = await supabase
+            .from('User')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+        return profile || user;
     },
 
     async forgotPassword(email) {
-        return apiRequest('/auth/forgot-password', {
-            method: 'POST',
-            body: JSON.stringify({ email })
-        });
+        return handleResponse(supabase.auth.resetPasswordForEmail(email));
     },
 
-    logout() {
-        clearToken();
+    async logout() {
+        await supabase.auth.signOut();
         window.location.hash = '/signin';
     }
 };
@@ -125,105 +82,164 @@ export const auth = {
 
 export const listings = {
     async search(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/listings${query ? `?${query}` : ''}`);
+        let query = supabase.from('Listing').select('*, host:User(*)');
+
+        if (params.type) {
+            query = query.eq('type', params.type);
+        }
+        if (params.limit) {
+            query = query.limit(Number(params.limit));
+        }
+        // Add more filters as needed
+
+        return handleResponse(query);
     },
 
-    async getHostListings(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/listings/host${query ? `?${query}` : ''}`);
+    async getHostListings() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        return handleResponse(
+            supabase.from('Listing').select('*').eq('hostId', user.id)
+        );
     },
 
     async get(id) {
-        return apiRequest(`/listings/${id}`);
+        return handleResponse(
+            supabase.from('Listing').select('*, host:User(*)').eq('id', id).single()
+        );
     },
 
     async create(data) {
-        return apiRequest('/listings', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const listingData = { ...data, hostId: user.id };
+        return handleResponse(
+            supabase.from('Listing').insert(listingData).select().single()
+        );
     },
 
     async update(id, data) {
-        return apiRequest(`/listings/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        });
+        return handleResponse(
+            supabase.from('Listing').update(data).eq('id', id).select().single()
+        );
     },
 
     async delete(id) {
-        return apiRequest(`/listings/${id}`, { method: 'DELETE' });
+        return handleResponse(
+            supabase.from('Listing').delete().eq('id', id)
+        );
     }
 };
 
 // ============ BOOKINGS API ============
 
 export const bookings = {
-    async list(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/bookings${query ? `?${query}` : ''}`);
+    async list() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        return handleResponse(
+            supabase.from('Booking')
+                .select('*, listing:Listing(*)')
+                .eq('userId', user.id)
+                .order('checkIn', { ascending: true })
+        );
     },
 
     async get(id) {
-        return apiRequest(`/bookings/${id}`);
+        return handleResponse(
+            supabase.from('Booking').select('*, listing:Listing(*)').eq('id', id).single()
+        );
     },
 
     async create(data) {
-        return apiRequest('/bookings', {
-            method: 'POST',
-            body: JSON.stringify(data)
-        });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const bookingData = { ...data, userId: user.id, status: 'PENDING' };
+        return handleResponse(
+            supabase.from('Booking').insert(bookingData).select().single()
+        );
     },
 
     async cancel(id) {
-        return apiRequest(`/bookings/${id}/cancel`, { method: 'PUT' });
+        return handleResponse(
+            supabase.from('Booking').update({ status: 'CANCELLED' }).eq('id', id).select().single()
+        );
     },
 
-    async getHostBookings(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/bookings/host${query ? `?${query}` : ''}`);
-    },
+    async getHostBookings() {
+        const { data: { user } } = await supabase.auth.getUser();
+        // Complex join: Find bookings where Listing.hostId == user.id
+        // Supabase JS doesn't support deep nested filtering easily in one go without simplified views or RPC.
+        // For now, let's fetch listings owned by host, then bookings for those listings.
 
-    async confirm(id) {
-        return apiRequest(`/bookings/${id}/confirm`, { method: 'PUT' });
-    },
+        const { data: listings } = await supabase.from('Listing').select('id').eq('hostId', user.id);
+        const listingIds = listings.map(l => l.id);
 
-    async reject(id) {
-        return apiRequest(`/bookings/${id}/reject`, { method: 'PUT' });
+        return handleResponse(
+            supabase.from('Booking')
+                .select('*, listing:Listing(*), user:User(*)')
+                .in('listingId', listingIds)
+                .order('createdAt', { ascending: false })
+        );
     }
 };
 
 // ============ REVIEWS API ============
 
 export const reviews = {
-    async list(listingId, params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/reviews/listing/${listingId}${query ? `?${query}` : ''}`);
+    async list(listingId) {
+        return handleResponse(
+            supabase.from('Review').select('*, user:User(*)').eq('listingId', listingId)
+        );
     },
 
     async create(listingId, rating, comment) {
-        return apiRequest(`/reviews/listing/${listingId}`, {
-            method: 'POST',
-            body: JSON.stringify({ rating, comment })
-        });
+        const { data: { user } } = await supabase.auth.getUser();
+        const reviewData = {
+            userId: user.id,
+            listingId,
+            rating,
+            comment
+        };
+        return handleResponse(
+            supabase.from('Review').insert(reviewData).select().single()
+        );
     }
 };
 
 // ============ FAVORITES API ============
 
 export const favorites = {
-    async list(params = {}) {
-        const query = new URLSearchParams(params).toString();
-        return apiRequest(`/favorites${query ? `?${query}` : ''}`);
+    async list() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return []; // Return empty if not logged in
+
+        return handleResponse(
+            supabase.from('Favorite')
+                .select('*, listing:Listing(*)')
+                .eq('userId', user.id)
+        );
     },
 
     async add(listingId) {
-        return apiRequest(`/favorites/${listingId}`, { method: 'POST' });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        return handleResponse(
+            supabase.from('Favorite').insert({ userId: user.id, listingId })
+        );
     },
 
     async remove(listingId) {
-        return apiRequest(`/favorites/${listingId}`, { method: 'DELETE' });
+        const { data: { user } } = await supabase.auth.getUser();
+
+        return handleResponse(
+            supabase.from('Favorite').delete().eq('userId', user.id).eq('listingId', listingId)
+        );
     },
 
     async toggle(listingId, isFavorited) {
@@ -238,33 +254,37 @@ export const favorites = {
 
 export const users = {
     async get(id) {
-        return apiRequest(`/users/${id}`);
+        return handleResponse(
+            supabase.from('User').select('*').eq('id', id).single()
+        );
     },
 
     async update(data) {
-        const res = await apiRequest('/users/me', {
-            method: 'PUT',
-            body: JSON.stringify(data)
-        });
-        // Update stored user
-        setCurrentUser(res.user); // Assuming the API returns { user: updatedUser }
-        return res.user;
+        const { data: { user } } = await supabase.auth.getUser();
+        return handleResponse(
+            supabase.from('User').update(data).eq('id', user.id).select().single()
+        );
     },
 
     async becomeHost() {
-        const res = await apiRequest('/users/me/become-host', {
-            method: 'PUT'
-        });
-        const currentUser = getCurrentUser();
-        // Update stored user
-        if (currentUser) {
-            setCurrentUser({ ...currentUser, isHost: true });
-        }
-        return res;
+        const { data: { user } } = await supabase.auth.getUser();
+        return handleResponse(
+            supabase.from('User').update({ isHost: true }).eq('id', user.id).select().single()
+        );
     }
 };
 
-// Export default API object
+// Helper for checking auth state
+export const isAuthenticated = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
+};
+
+export const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+};
+
 export default {
     auth,
     listings,
@@ -273,6 +293,5 @@ export default {
     favorites,
     users,
     isAuthenticated,
-    getCurrentUser,
-    clearToken
+    getCurrentUser
 };

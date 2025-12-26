@@ -4,6 +4,7 @@
  */
 import { bottomNav } from '../components/bottom-nav.js';
 import { listings, favorites, isAuthenticated, getCurrentUser } from '../api.js';
+import { waitForElement, escapeHtml } from '../lib/dom.js';
 
 // Store current filter state
 let currentFilter = 'TENT';
@@ -15,11 +16,14 @@ let userFavorites = new Set();
  */
 function renderListingCard(listing) {
   const isFavorited = userFavorites.has(listing.id);
+  // Simple check for safe URL, or just basic escaping for style attribute
+  const imageUrl = (listing.images?.[0] || 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800').replace(/"/g, '%22');
+
   return `
         <div class="px-4">
           <div data-navigate="/listing/${listing.id}" class="group relative flex flex-col items-stretch justify-start rounded-2xl bg-surface-dark overflow-hidden shadow-lg shadow-black/20 hover:shadow-primary/5 transition-all cursor-pointer">
             <div class="relative w-full aspect-4/3 bg-gray-800">
-              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("${listing.images?.[0] || 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800'}");'></div>
+              <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style='background-image: url("${imageUrl}");'></div>
               <button data-favorite="${listing.id}" class="absolute top-3 right-3 h-10 w-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center ${isFavorited ? 'text-primary' : 'text-white'} hover:bg-primary hover:text-background-dark transition-colors z-10" onclick="event.stopPropagation()">
                 <span class="material-symbols-outlined text-[20px] ${isFavorited ? 'icon-filled' : ''}">favorite</span>
               </button>
@@ -36,10 +40,10 @@ function renderListingCard(listing) {
             <div class="flex flex-col gap-1 p-4">
               <div class="flex justify-between items-start">
                 <div>
-                  <h4 class="text-white text-lg font-bold leading-tight">${listing.title}</h4>
+                  <h4 class="text-white text-lg font-bold leading-tight">${escapeHtml(listing.title)}</h4>
                   <p class="text-gray-400 text-sm flex items-center gap-1 mt-1">
                     <span class="material-symbols-outlined text-[16px]">location_on</span>
-                    ${listing.location}
+                    ${escapeHtml(listing.location)}
                   </p>
                 </div>
                 <div class="flex flex-col items-end">
@@ -220,7 +224,7 @@ export async function homePage() {
   loadFavorites();
 
   // Delay loading listings to allow render first
-  setTimeout(() => loadListings(), 50);
+  waitForElement('#listings-container').then(() => loadListings());
 
   return `
     <div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">

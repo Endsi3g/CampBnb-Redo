@@ -14,6 +14,7 @@ CampBnB is a modern, full-stack Progressive Web App (PWA) built for outdoor enth
 * **User Accounts**: Secure authentication, profile management, and "Saved" listings.
 * **Host Dashboard**: Tools for hosts to create and manage their listings and bookings.
 * **Responsive Design**: Mobile-first UI built with Tailwind CSS, featuring dark mode support.
+* **Supabase Native**: Serverless backend with robust security policies.
 
 ## 🛠️ Tech Stack
 
@@ -26,17 +27,15 @@ CampBnB is a modern, full-stack Progressive Web App (PWA) built for outdoor enth
 
 ### Backend
 
-* **Runtime**: Node.js & Express
 * **Database**: PostgreSQL (Supabase)
-* **ORM**: Prisma
-* **Authentication**: JSON Web Tokens (JWT)
+* **Authentication**: Supabase Auth
+* **API**: Direct Database Access via Supabase Client (Serverless)
 
 ## 📦 Installation & Setup
 
 ### Prerequisites
 
 * Node.js (v18+)
-* Deepmind/Google Cloud environment (or local machine)
 
 ### 1. Clone the Repository
 
@@ -49,63 +48,46 @@ cd CampBnb-Redo
 
 ```bash
 npm install
-npm run dev
 ```
 
-The frontend will run on `http://localhost:3000`.
-
-### 3. Backend Setup
-
-```bash
-cd server
-npm install
-```
-
-### 4. Environment Configuration
+### 3. Environment Configuration
 
 Copy the example environment file:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-Update `.env` with your Supabase credentials.
+Update `.env.local` with your Supabase URL and Anon Key.
 
-### 5. Database Migration
-
-```bash
-npx prisma migrate dev
-npx prisma db seed
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 6. Run the Server
+### 4. Run the App
 
 ```bash
 npm run dev
 ```
 
-The backend will run on `http://localhost:3001`.
+The app will run on `http://localhost:3000`.
 
 ## 🚀 Deployment
-
-### Backend (Google Cloud Run)
-
-1. Build the Docker image.
-2. Deploy to Cloud Run.
-3. Set environment variables (`DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`).
 
 ### Frontend (Netlify/Vercel)
 
 1. Build the app (`npm run build`).
 2. Deploy the `dist` folder.
-3. Set `VITE_API_URL` to your Cloud Run backend URL.
+3. Set environment variables:
+    * `VITE_SUPABASE_URL`
+    * `VITE_SUPABASE_ANON_KEY`
 
 ## 🔒 Security
 
+* **Row Level Security (RLS)**: Database policies restrict access to data based on user/owner.
 * **Input Validation**: Strict validation on all API endpoints.
 * **XSS Protection**: Content Sanitization in frontend router.
-* **Secure Headers**: Helmet.js configured on backend.
-* **Cors**: Strict Origin policies.
 
 ## 📄 License
 

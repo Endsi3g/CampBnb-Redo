@@ -2,6 +2,7 @@
     "name": "CampBnB",
     "short_name": "CampBnB",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "background_color": "#102216",
     "theme_color": "#11d452",
