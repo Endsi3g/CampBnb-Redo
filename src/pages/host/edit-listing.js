@@ -1,9 +1,14 @@
 /**
  * Edit Listing Page
  */
-import { listings } from '../../api.js';
+import { listings, isAuthenticated } from '../../api.js';
+import { waitForElement } from '../../lib/dom.js';
 
 export function editListingPage(params) {
+    if (!isAuthenticated()) {
+        window.location.hash = '/signin';
+        return;
+    }
     const listingId = params?.id;
     let formData = {
         title: '',
@@ -215,7 +220,7 @@ export function editListingPage(params) {
         }
     }
 
-    setTimeout(loadData, 50);
+    waitForElement('#edit-listing-container').then(() => loadData());
 
     return `
     <div class="min-h-screen bg-background-light dark:bg-background-dark">

@@ -85,9 +85,9 @@ function getGreeting() {
 }
 
 /**
- * Initialize page events
+ * Initialize static page events (run once)
  */
-function initHomeEvents() {
+function initStaticEvents() {
   // Category filter buttons
   document.querySelectorAll('[data-filter]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -99,7 +99,12 @@ function initHomeEvents() {
       await loadListings();
     });
   });
+}
 
+/**
+ * Initialize dynamic events (run after render)
+ */
+function initDynamicEvents() {
   // Favorite buttons
   document.querySelectorAll('[data-favorite]').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -185,7 +190,7 @@ async function loadListings() {
       listingsContainer.innerHTML = listingsData.map(renderListingCard).join('');
     }
 
-    initHomeEvents();
+    initDynamicEvents();
   } catch (error) {
     console.error('Error loading listings:', error);
     listingsContainer.innerHTML = `
@@ -224,7 +229,10 @@ export async function homePage() {
   loadFavorites();
 
   // Delay loading listings to allow render first
-  waitForElement('#listings-container').then(() => loadListings());
+  waitForElement('#listings-container').then(() => {
+    initStaticEvents();
+    loadListings();
+  });
 
   return `
     <div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden pb-24">

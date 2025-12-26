@@ -2,6 +2,7 @@
  * Create Listing Page
  */
 import { listings } from '../../api.js';
+import { waitForElement } from '../../lib/dom.js';
 
 export function createListingPage() {
     let formData = {
@@ -176,7 +177,7 @@ export function createListingPage() {
         }
     }
 
-    setTimeout(render, 50);
+    waitForElement('#create-listing-container').then(() => render());
 
     return `
     <div class="min-h-screen bg-background-light dark:bg-background-dark">

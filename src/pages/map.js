@@ -76,9 +76,19 @@ function initMap(mapListings) {
 
     // Add markers
     mapListings.forEach(listing => {
-        if (!listing.coordinates) return;
+        // Use latitude/longitude from DB or fallback to coordinates object if legacy
+        let lat = listing.latitude;
+        let lng = listing.longitude;
 
-        const { lat, lng } = listing.coordinates;
+        if (typeof lat === 'undefined' || typeof lng === 'undefined') {
+            if (listing.coordinates) {
+                lat = listing.coordinates.lat;
+                lng = listing.coordinates.lng;
+            }
+        }
+
+        if (!lat || !lng) return;
+
         const title = escapeHtml(listing.title);
         const price = escapeHtml(listing.price);
         const image = listing.images?.[0] || ''; // URL, assumes trusted source or handled by browser image standard

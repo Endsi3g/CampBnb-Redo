@@ -11,6 +11,11 @@ export function tripsPage() {
     let loading = true;
 
     async function loadData() {
+        if (!await isAuthenticated()) {
+            window.location.hash = '/signin';
+            return;
+        }
+
         try {
             const data = await bookings.list({ limit: 50 }); // Fetch enough history
             myBookings = data.data || [];

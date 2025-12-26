@@ -17,8 +17,11 @@ export function hostDashboardPage() {
     // Check if user is host
     async function checkHostStatus() {
         const user = await auth.me();
+        if (!user) {
+            window.location.hash = '/signin';
+            return false;
+        }
         if (!user.isHost) {
-            // Redirect or show "Become a Host" prompt
             renderBecomeHost(user);
             return false;
         }
